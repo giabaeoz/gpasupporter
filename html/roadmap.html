@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lộ trình | Credit & GPA Strategist</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+  <!-- =================== AUTH SCREEN (Chỉ để tương thích JS, ẩn đi) ==================== -->
+  <section id="auth-screen" style="display: none;"></section>
+
+  <!-- =================== MAIN APP ======================== -->
+  <section id="main-app" class="main-app">
+
+    <header class="navbar-pill">
+      <div class="nav-left">
+        <strong>CG Strategist</strong>
+      </div>
+      <div class="nav-center hidden-mobile">
+        <a href="index.html" class="nav-tab">Nhập điểm</a>
+        <a href="roadmap.html" class="nav-tab active">Lộ trình</a>
+        <a href="subjects.html" class="nav-tab">Môn lẻ</a>
+      </div>
+      <div class="nav-right flex-center">
+        <span id="user-email-display" class="user-email hidden-mobile"></span>
+        <button id="btn-logout" class="btn-avatar" title="Đăng xuất">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="soft-grid">
+      <!-- CỘT TRÁI (TỔNG KẾT) -->
+      <div class="col-left">
+        <div class="soft-card h-100">
+          <h2 class="card-title text-center" style="justify-content:center;">GPA TÍCH LŨY MỚI</h2>
+          <div class="huge-gpa" id="sim-gpa-projected">0.00</div>
+          
+          <div class="stats-split">
+            <div class="stat-box-split">
+              <span class="stat-label">TÍN CHỈ TỔNG</span>
+              <strong class="stat-value-md" id="sim-credits-projected">0</strong>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-box-split">
+              <span class="stat-label">XẾP LOẠI</span>
+              <strong class="stat-value-md" id="rank-value">—</strong>
+            </div>
+          </div>
+          
+          <div class="stats-row mt-20">
+            <div class="stat-box">
+              <span class="stat-label">GPA GỐC</span>
+              <strong class="stat-value" id="gpa-value" style="font-size:24px;">0.00</strong>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">TC GỐC</span>
+              <strong class="stat-value" style="font-size:24px;"><span id="credits-current">0</span>/<span id="credits-total">150</span></strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI (LỘ TRÌNH GIẢ LẬP) -->
+      <div class="col-right">
+        
+        <div class="soft-card">
+          <div class="card-header space-between mb-15">
+            <h2 class="card-title-sm" style="font-size:18px;">Thêm môn học vào Lộ trình</h2>
+          </div>
+          <p class="text-muted text-sm mb-20">Nhập các môn học dự kiến trong học kỳ tới để xem điểm GPA mục tiêu của bạn sẽ thay đổi như thế nào.</p>
+          
+          <form id="sim-form" class="sim-manual-form">
+            <input type="text" id="sim-name" placeholder="Tên môn học (VD: Nhập môn AI)" required class="soft-input mb-15">
+            <div class="grid-2-col mb-20">
+              <input type="number" id="sim-credits" placeholder="Số tín chỉ (VD: 3)" required min="1" max="15" class="soft-input">
+              <input type="number" id="sim-grade" placeholder="Điểm MT (VD: 8.5)" required min="0" max="10" step="0.1" class="soft-input">
+            </div>
+            <button type="submit" class="btn-primary w-100">Thêm vào lộ trình</button>
+          </form>
+        </div>
+
+        <div class="soft-card">
+          <h2 class="card-title">🎯 Môn học Dự kiến / Giả lập (<span id="sim-count">0</span>)</h2>
+          <ul id="sim-list" class="soft-list mt-20">
+            <!-- JS Render -->
+          </ul>
+        </div>
+
+      </div>
+    </main>
+  </section>
+
+  <!-- Dummy tags to prevent JS errors -->
+  <div style="display:none;">
+    <form id="auth-form"></form><input id="auth-email"><input id="auth-password"><div id="auth-message"></div><button id="btn-login"></button><button id="btn-register"></button>
+    <textarea id="input-transcript"></textarea><button id="btn-parse-save"></button><div id="parse-message"></div>
+    <tbody id="course-tbody"></tbody><div id="table-empty"></div><div id="grade-distribution"></div>
+  </div>
+
+  <script type="module" src="../js/app.js"></script>
+</body>
+</html>
