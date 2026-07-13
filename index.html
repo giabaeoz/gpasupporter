@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nhập điểm | Credit & GPA Strategist</title>
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/style.css" />
 </head>
+
 <body>
 
   <!-- =================== AUTH SCREEN ==================== -->
@@ -17,10 +19,11 @@
     <div class="soft-card auth-container">
       <h1 class="auth-title">CG Strategist</h1>
       <p class="auth-subtitle">Đăng nhập để tiếp tục</p>
-      
+
       <form id="auth-form" class="auth-form">
         <input type="email" id="auth-email" class="soft-input mb-15" placeholder="Email" required />
-        <input type="password" id="auth-password" class="soft-input mb-24" placeholder="Mật khẩu" required minlength="6" />
+        <input type="password" id="auth-password" class="soft-input mb-24" placeholder="Mật khẩu" required
+          minlength="6" />
         <div id="auth-message" class="auth-message"></div>
         <button type="submit" id="btn-login" class="btn-primary w-100 mb-15">Đăng nhập</button>
         <button type="button" id="btn-register" class="btn-outline w-100">Đăng ký mới</button>
@@ -37,13 +40,15 @@
       </div>
       <div class="nav-center hidden-mobile">
         <a href="index.html" class="nav-tab active">Nhập điểm</a>
-        <a href="roadmap.html" class="nav-tab">Lộ trình</a>
-        <a href="subjects.html" class="nav-tab">Môn lẻ</a>
+        <a href="html/roadmap.html" class="nav-tab">Lộ trình</a>
+        <a href="html/subjects.html" class="nav-tab">Môn lẻ</a>
       </div>
       <div class="nav-right flex-center">
         <span id="user-email-display" class="user-email hidden-mobile"></span>
         <button id="btn-logout" class="btn-avatar" title="Đăng xuất">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
         </button>
       </div>
     </header>
@@ -53,7 +58,10 @@
       <div class="col-left">
         <div class="soft-card h-100">
           <h2 class="card-title">
-            <svg class="icon-inline" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+            <svg class="icon-inline" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+              viewBox="0 0 24 24">
+              <path d="M12 20V10M18 20V4M6 20v-4" />
+            </svg>
             Tổng kết
           </h2>
           <div class="stats-row">
@@ -63,10 +71,11 @@
             </div>
             <div class="stat-box">
               <span class="stat-label">TÍCH LŨY</span>
-              <strong class="stat-value"><span id="credits-current">0</span>/<span id="credits-total">150</span></strong>
+              <strong class="stat-value"><span id="credits-current">0</span>/<span
+                  id="credits-total">150</span></strong>
             </div>
           </div>
-          
+
           <div class="stats-split">
             <div class="stat-box-split">
               <span class="stat-label">TÍN CHỈ</span>
@@ -78,14 +87,14 @@
               <strong class="stat-value-md" id="rank-value">—</strong>
             </div>
           </div>
-          
+
           <button class="btn-outline w-100" onclick="window.location.href='roadmap.html'">Đến Lộ Trình Giả Lập</button>
         </div>
       </div>
 
       <!-- CỘT PHẢI (CHỌN CÁCH NHẬP) -->
       <div class="col-right">
-        
+
         <div class="soft-card welcome-card">
           <h2 class="card-title mb-0">👋 Chào mừng bạn đến với hệ thống</h2>
           <p class="text-muted mt-10">Dán dữ liệu từ portal để đồng bộ điểm số của bạn chỉ trong 5 giây.</p>
@@ -96,15 +105,18 @@
             <span class="card-title-sm">Đồng bộ dữ liệu Portal</span>
             <span class="tag-yellow">Nhanh chóng</span>
           </div>
-          <p class="text-muted text-sm mt-10 mb-15">Copy toàn bộ bảng điểm từ trang web trường (bao gồm cả dòng tiêu đề học kỳ) và dán vào ô dưới đây.</p>
-          <textarea id="input-transcript" class="soft-textarea flex-grow" placeholder="Dán dữ liệu bảng điểm vào đây..."></textarea>
+          <p class="text-muted text-sm mt-10 mb-15">Copy toàn bộ bảng điểm từ trang web trường (bao gồm cả dòng tiêu đề
+            học kỳ) và dán vào ô dưới đây.</p>
+          <textarea id="input-transcript" class="soft-textarea flex-grow"
+            placeholder="Dán dữ liệu bảng điểm vào đây..."></textarea>
           <div id="parse-message" class="auth-message mt-10"></div>
           <button id="btn-parse-save" class="btn-primary w-100 mt-20">Nhập dữ liệu từ Portal</button>
         </div>
 
         <div class="tip-box soft-card">
           <h3 class="tip-title">💡 MẸO SỬ DỤNG</h3>
-          <p class="tip-desc">Bạn chỉ cần bấm Ctrl+A và Ctrl+C tại trang web xem điểm của trường, sau đó dán vào đây. Hệ thống sẽ tự động bóc tách mã môn, tên môn, tín chỉ và điểm số chính xác!</p>
+          <p class="tip-desc">Bạn chỉ cần bấm Ctrl+A và Ctrl+C tại trang web xem điểm của trường, sau đó dán vào đây. Hệ
+            thống sẽ tự động bóc tách mã môn, tên môn, tín chỉ và điểm số chính xác!</p>
         </div>
 
       </div>
@@ -123,4 +135,5 @@
 
   <script type="module" src="../js/app.js"></script>
 </body>
+
 </html>
