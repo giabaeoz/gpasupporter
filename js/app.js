@@ -1,85 +1,20 @@
 // ================================================================
-// Credit & GPA Strategist — app.js
-// Main Application Logic (ES6 Module)
-// Supabase Integration + Mock Data Fallback
+// Credit & GPA Strategist — app.js (v2 — Sidebar + Semester + Delete)
+// Vanilla JS · ES6 Module · Supabase Integration
 // ================================================================
 
-// ======================= SUPABASE CONFIG =======================
-// Điền key thật vào đây. Nếu để trống, hệ thống dùng Mock Data.
+// ======================= CONFIG =======================
 const SUPABASE_URL = 'https://uhqvankajktrkbydfixk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_pKLKuuSiLu2Bwp4hpUxIPg_3OdOFa6h';
 
 // ======================= CONSTANTS =======================
-const TOTAL_CREDITS_REQUIRED = 150;
-
-// ======================= STATE =======================
-let supabase = null;
-let currentUser = null;
-let isUsingMockData = true;
-let courseData = [];       // Dữ liệu môn từ DB / Mock
-let simulatedCourses = []; // Dữ liệu giả lập (local state)
-
-// ======================= MOCK DATA =======================
-const MOCK_USER = {
-  email: 'demo@gpastrategy.app',
-  id: 'mock-user-001'
-};
-
-const MOCK_COURSES = [
-  // --- 3 môn mẫu gốc từ đề bài ---
-  { id: 1, ma_mon: 'MAT101', ten_mon: 'Toán Đại số', tin_chi: 3, diem_10: 7.0 },
-  { id: 2, ma_mon: 'CSE102', ten_mon: 'Cơ sở Tin học', tin_chi: 4, diem_10: 6.5 },
-  { id: 3, ma_mon: 'CSE201', ten_mon: 'Cấu trúc dữ liệu', tin_chi: 3, diem_10: 5.0 },
-  // --- Các môn bổ sung để đạt ~50 TC, GPA ≈ 2.67 ---
-  { id: 4, ma_mon: 'PHY101', ten_mon: 'Vật lý Đại cương', tin_chi: 3, diem_10: 7.5 },
-  { id: 5, ma_mon: 'ENG101', ten_mon: 'Tiếng Anh 1', tin_chi: 3, diem_10: 9.0 },
-  { id: 6, ma_mon: 'MAT102', ten_mon: 'Giải tích 1', tin_chi: 4, diem_10: 6.0 },
-  { id: 7, ma_mon: 'CSE103', ten_mon: 'Lập trình C/C++', tin_chi: 3, diem_10: 7.0 },
-  { id: 8, ma_mon: 'POL101', ten_mon: 'Triết học Mác - Lênin', tin_chi: 3, diem_10: 7.0 },
-  { id: 9, ma_mon: 'MAT201', ten_mon: 'Xác suất Thống kê', tin_chi: 3, diem_10: 6.0 },
-  { id: 10, ma_mon: 'CSE202', ten_mon: 'Lập trình Hướng đối tượng', tin_chi: 3, diem_10: 7.5 },
-  { id: 11, ma_mon: 'CSE203', ten_mon: 'Cơ sở Dữ liệu', tin_chi: 4, diem_10: 6.0 },
-  { id: 12, ma_mon: 'ENG102', ten_mon: 'Tiếng Anh 2', tin_chi: 3, diem_10: 7.0 },
-  { id: 13, ma_mon: 'CSE301', ten_mon: 'Thuật toán Nâng cao', tin_chi: 3, diem_10: 5.0 },
-  { id: 14, ma_mon: 'PHY102', ten_mon: 'Vật lý Đại cương 2', tin_chi: 2, diem_10: 6.5 },
-  { id: 15, ma_mon: 'POL102', ten_mon: 'Kinh tế Chính trị', tin_chi: 3, diem_10: 6.5 },
-  { id: 16, ma_mon: 'CSE302', ten_mon: 'Kỹ thuật Lập trình', tin_chi: 3, diem_10: 8.0 },
+const EXCLUDED_SUBJECTS = [
+  'giáo dục thể chất', 'quốc phòng', 'kỹ năng mềm',
+  'giáo dục qp', 'gdtc', 'chuyên đề', 'shđk',
+  'quân sự', 'an ninh', 'điền kinh', 'bóng chuyền',
+  'bóng đá', 'chiến đấu', 'bơi lội', 'cầu lông',
 ];
 
-const MOCK_SIMULATED = [
-  { id: Date.now(), ten_mon: 'Mạng máy tính nhóm 1', tin_chi: 3, diem_muc_tieu: 8.0 },
-  { id: Date.now() + 1, ten_mon: 'Hệ điều hành nhóm 1', tin_chi: 3, diem_muc_tieu: 8.5 },
-];
-
-
-// ======================= SUPABASE INITIALIZATION =======================
-async function initSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn('[GPA Strategist] Supabase chưa cấu hình → Sử dụng Mock Data.');
-    isUsingMockData = true;
-    return;
-  }
-
-  try {
-    // Dynamic import Supabase SDK from CDN
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    isUsingMockData = false;
-    console.log('[GPA Strategist] Supabase đã kết nối thành công.');
-  } catch (err) {
-    console.error('[GPA Strategist] Không thể khởi tạo Supabase:', err);
-    isUsingMockData = true;
-  }
-}
-
-
-// ======================= YÊU CẦU 1: THANG ĐIỂM & THUẬT TOÁN GPA =======================
-
-/**
- * Mảng cấu hình GRADING_SCALE — Barem quy đổi chính xác.
- * Mỗi phần tử: { min, max, diemChu, diemHe4, cssClass }
- * Sắp xếp giảm dần theo min để hàm convertGrade duyệt từ cao xuống.
- */
 const GRADING_SCALE = [
   { min: 9.0, max: 10.0, diemChu: 'A', diemHe4: 4.0, cssClass: 'a' },
   { min: 8.0, max: 8.9, diemChu: 'B+', diemHe4: 3.5, cssClass: 'b' },
@@ -91,53 +26,60 @@ const GRADING_SCALE = [
   { min: 0.0, max: 3.9, diemChu: 'F', diemHe4: 0.0, cssClass: 'f' },
 ];
 
-/**
- * Quy đổi điểm hệ 10 sang object { diemChu, diemHe4 }.
- * Duyệt qua GRADING_SCALE từ mức cao nhất xuống.
- * @param {number} diemHe10 - Điểm trên thang 10 (0.0 → 10.0)
- * @returns {{ diemChu: string, diemHe4: number }}
- */
-function convertGrade(diemHe10) {
-  // Clamp giá trị vào [0, 10]
-  const score = Math.max(0, Math.min(10, diemHe10));
+// ======================= STATE =======================
+let supabase = null;
+let currentUser = null;
+let isUsingMockData = true;
+let courseData = [];
+let simulatedCourses = [];
+let semesters = [];  // ['Học kỳ 1 - Năm 1', ...]
+let totalCreditsRequired = 150;
+let predictedGrades = {}; // { ma_mon: predicted_score }
 
-  for (const level of GRADING_SCALE) {
-    if (score >= level.min) {
-      return { diemChu: level.diemChu, diemHe4: level.diemHe4 };
-    }
+// ======================= MOCK =======================
+const MOCK_USER = { email: 'demo@gpastrategy.app', id: 'mock-user-001' };
+const MOCK_COURSES = [
+  { ma_mon: 'MAT101', ten_mon: 'Toán Đại số', tin_chi: 3, diem_10: 7.0, hoc_ky: 'Học kỳ 1' },
+  { ma_mon: 'CSE102', ten_mon: 'Cơ sở Tin học', tin_chi: 4, diem_10: 6.5, hoc_ky: 'Học kỳ 1' },
+  { ma_mon: 'PHY101', ten_mon: 'Vật lý Đại cương', tin_chi: 3, diem_10: 7.5, hoc_ky: 'Học kỳ 1' },
+  { ma_mon: 'ENG101', ten_mon: 'Tiếng Anh 1', tin_chi: 3, diem_10: 9.0, hoc_ky: 'Học kỳ 2' },
+  { ma_mon: 'CSE201', ten_mon: 'Cấu trúc dữ liệu', tin_chi: 3, diem_10: 5.0, hoc_ky: 'Học kỳ 2' },
+];
+
+// ======================= SUPABASE INIT =======================
+async function initSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) { isUsingMockData = true; return; }
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    isUsingMockData = false;
+    console.log('[App] Supabase connected.');
+  } catch (err) {
+    console.error('[App] Supabase init failed:', err);
+    isUsingMockData = true;
   }
-  // Fallback (không bao giờ xảy ra nếu GRADING_SCALE có min=0)
+}
+
+// ======================= GRADE HELPERS =======================
+function convertGrade(diemHe10) {
+  const score = Math.max(0, Math.min(10, diemHe10));
+  for (const level of GRADING_SCALE) {
+    if (score >= level.min) return { diemChu: level.diemChu, diemHe4: level.diemHe4 };
+  }
   return { diemChu: 'F', diemHe4: 0.0 };
 }
 
-/**
- * Trả về thông tin đầy đủ từ GRADING_SCALE (bao gồm cssClass cho UI).
- * Thay thế hàm getLetterGrade cũ.
- * @param {number} diemHe10
- * @returns {{ diemChu: string, diemHe4: number, cssClass: string }}
- */
 function getGradeInfo(diemHe10) {
-  if (diemHe10 === null || diemHe10 < 0) {
-    return { diemChu: 'M', diemHe4: 4.0, cssClass: 'm' };
+  if (diemHe10 === null || diemHe10 === undefined || diemHe10 < 0) {
+    return { diemChu: 'M', diemHe4: 0, cssClass: 'm' };
   }
   const score = Math.max(0, Math.min(10, diemHe10));
   for (const level of GRADING_SCALE) {
-    if (score >= level.min) {
-      return {
-        diemChu: level.diemChu,
-        diemHe4: level.diemHe4,
-        cssClass: level.cssClass,
-      };
-    }
+    if (score >= level.min) return { diemChu: level.diemChu, diemHe4: level.diemHe4, cssClass: level.cssClass };
   }
   return { diemChu: 'F', diemHe4: 0.0, cssClass: 'f' };
 }
 
-/**
- * Xếp loại học lực dựa trên GPA hệ 4.
- * @param {number} gpa - GPA tích lũy hệ 4
- * @returns {string} Xếp loại tiếng Việt
- */
 function getAcademicRank(gpa) {
   if (gpa >= 3.6) return 'Xuất sắc';
   if (gpa >= 3.2) return 'Giỏi';
@@ -147,55 +89,63 @@ function getAcademicRank(gpa) {
   return 'Kém';
 }
 
-/**
- * Tính GPA tích lũy theo ĐÚNG thuật toán:
- *   1. Quy đổi điểm hệ 10 của TỪNG MÔN → điểm hệ 4 (qua convertGrade)
- *   2. Nhân điểm hệ 4 × số tín chỉ của môn đó
- *   3. Cộng tổng tất cả → chia cho tổng tín chỉ
- * KHÔNG tính trung bình hệ 10 rồi mới quy đổi.
- *
- * @param {Array} courses - [{ tin_chi, diem_10 }] hoặc [{ tin_chi, diem_muc_tieu }]
- * @returns {number} GPA hệ 4 (0.00 → 4.00)
- */
+/** Kiểm tra môn này có bị loại khỏi phép tính GPA không */
+function isExcludedFromGPA(course) {
+  if (!course.tin_chi || course.tin_chi === 0) return true;
+  const name = (course.ten_mon || '').toLowerCase();
+  return EXCLUDED_SUBJECTS.some(keyword => name.includes(keyword));
+}
+
+/** Tính GPA — Loại trừ các môn điều kiện (QP/GDTC/KNM) và môn Miễn (M) */
 function calculateGPA(courses) {
   if (!courses.length) return 0;
-
-  let tongDiemHe4_x_TinChi = 0; // Σ (điểm_hệ_4_i × tín_chỉ_i)
-  let tongTinChi = 0;            // Σ tín_chỉ_i
-
+  let sum = 0, totalTC = 0;
   for (const c of courses) {
-    const diemHe10 = c.diem_10 ?? c.diem_muc_tieu ?? null;
-    // Bỏ qua môn chưa có điểm
-    if (diemHe10 === null || diemHe10 === undefined) continue;
-
-    // BƯỚC 1: Quy đổi điểm từng môn sang hệ 4
-    const { diemHe4 } = convertGrade(diemHe10);
-
-    // BƯỚC 2: Nhân với tín chỉ
-    tongDiemHe4_x_TinChi += diemHe4 * c.tin_chi;
-    tongTinChi += c.tin_chi;
+    const score = c.diem_10 ?? c.diem_muc_tieu ?? null;
+    if (score === null || score === undefined || score < 0) continue;
+    if (isExcludedFromGPA(c)) continue;
+    const { diemHe4 } = convertGrade(score);
+    sum += diemHe4 * c.tin_chi;
+    totalTC += c.tin_chi;
   }
-
-  // BƯỚC 3: Chia tổng
-  return tongTinChi > 0 ? tongDiemHe4_x_TinChi / tongTinChi : 0;
+  return totalTC > 0 ? sum / totalTC : 0;
 }
 
-/**
- * Tính tổng tín chỉ từ danh sách môn.
- * @param {Array} courses
- * @returns {number}
- */
+function calculateGPA10(courses) {
+  if (!courses.length) return 0;
+  let sum = 0, totalTC = 0;
+  for (const c of courses) {
+    const score = c.diem_10 ?? c.diem_muc_tieu ?? null;
+    if (score === null || score === undefined || score < 0) continue;
+    if (isExcludedFromGPA(c)) continue;
+    sum += score * c.tin_chi;
+    totalTC += c.tin_chi;
+  }
+  return totalTC > 0 ? sum / totalTC : 0;
+}
+
+/** Tổng tín chỉ — bao gồm cả môn điều kiện (nếu có điểm và không rớt) và môn miễn (M) */
 function calculateTotalCredits(courses) {
-  return courses.reduce((sum, c) => sum + (c.tin_chi || 0), 0);
-}
+  return courses.reduce((s, c) => {
+    // Xét trường hợp môn miễn
+    const gradeInfo = getGradeInfo(c.diem_10);
+    if (c.diem_chu === 'M' || gradeInfo.diemChu === 'M') {
+      return s + (c.tin_chi || 0);
+    }
 
+    const score = c.diem_10 ?? c.diem_muc_tieu ?? null;
+    // Không tính môn chưa có điểm, hoặc môn F (rớt)
+    if (score === null || score === undefined || score < 0) return s;
+    if (score < 4.0) return s; // rớt
+    return s + (c.tin_chi || 0);
+  }, 0);
+}
 
 // ======================= DOM REFERENCES =======================
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
 
 const DOM = {
-  // Auth
   authScreen: $('#auth-screen'),
   mainApp: $('#main-app'),
   authForm: $('#auth-form'),
@@ -206,148 +156,141 @@ const DOM = {
   btnRegister: $('#btn-register'),
   btnLogout: $('#btn-logout'),
   userEmailDisplay: $('#user-email-display'),
-
-  // Theme
-  themeToggle: $('#theme-toggle'),
-  iconSun: $('#icon-sun'),
-  iconMoon: $('#icon-moon'),
-
-  // Dashboard
+  sidebar: $('#sidebar'),
+  btnSidebarToggle: $('#btn-sidebar-toggle'),
+  mainContent: $('#main-content'),
   gpaValue: $('#gpa-value'),
   creditsCurrent: $('#credits-current'),
   creditsTotal: $('#credits-total'),
   creditsProgress: $('#credits-progress'),
-  creditsPercent: $('#credits-percent'),
   rankValue: $('#rank-value'),
-
-  // Input
   inputTranscript: $('#input-transcript'),
   btnParseSave: $('#btn-parse-save'),
   parseMessage: $('#parse-message'),
-
-  // Table
+  portalModal: $('#portal-modal'),
+  btnCloseModal: $('#btn-close-modal'),
+  btnCancelModal: $('#btn-cancel-modal'),
+  btnOpenModal: $$('.btn-open-modal'),
+  btnManualAdd: $('#btn-manual-add'),
+  btnGotoRoadmap: $('#btn-goto-roadmap'),
+  modalStatusText: $('#modal-status-text'),
+  welcomeView: $('#welcome-view'),
+  dataView: $('#data-view'),
+  semesterSelect: $('#semester-select'),
+  btnAddSemester: $('#btn-add-semester'),
   courseTbody: $('#course-tbody'),
   tableEmpty: $('#table-empty'),
-
-  // Chart
   gradeDistribution: $('#grade-distribution'),
-
-  // Simulation
   simForm: $('#sim-form'),
   simName: $('#sim-name'),
   simCredits: $('#sim-credits'),
   simGrade: $('#sim-grade'),
   simList: $('#sim-list'),
   simCount: $('#sim-count'),
-  simSummary: $('#sim-summary'),
   simGpaProjected: $('#sim-gpa-projected'),
   simCreditsProjected: $('#sim-credits-projected'),
+  settingsTotalCredits: $('#settings-total-credits'),
+  btnSaveSettings: $('#btn-save-settings'),
+  semesterListSettings: $('#semester-list-settings'),
 };
 
-
-// ======================= THEME MANAGEMENT =======================
-function initTheme() {
-  // Bỏ qua theme (Soft UI mặc định là sáng)
-}
-
-function setTheme(theme) {
-}
-
-function toggleTheme() {
-}
-
-
-// ======================= AUTH HELPERS =======================
+// ======================= UI HELPERS =======================
 function showAuthMessage(msg, type = 'error') {
+  if (!DOM.authMessage) return;
   DOM.authMessage.textContent = msg;
-  DOM.authMessage.className = `auth-message show ${type}`;
-  setTimeout(() => {
-    DOM.authMessage.classList.remove('show');
-  }, 5000);
+  DOM.authMessage.className = `auth-message ${type}`;
 }
 
 function showParseMessage(msg, type = 'success') {
+  if (!DOM.parseMessage) return;
   DOM.parseMessage.textContent = msg;
-  DOM.parseMessage.className = `auth-message show ${type}`;
-  setTimeout(() => {
-    DOM.parseMessage.classList.remove('show');
-  }, 4000);
+  DOM.parseMessage.className = `parse-message ${type}`;
+  setTimeout(() => { if (DOM.parseMessage) DOM.parseMessage.textContent = ''; }, 5000);
 }
 
 function showScreen(screen) {
   if (screen === 'auth') {
-    DOM.authScreen.style.display = 'flex';
-    DOM.mainApp.style.display = 'none';
+    if (DOM.authScreen) DOM.authScreen.style.display = 'flex';
+    if (DOM.mainApp) DOM.mainApp.style.display = 'none';
   } else {
-    DOM.authScreen.style.display = 'none';
-    DOM.mainApp.style.display = 'block';
+    if (DOM.authScreen) DOM.authScreen.style.display = 'none';
+    if (DOM.mainApp) DOM.mainApp.style.display = 'flex';
   }
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
 
-// ======================= YÊU CẦU 2: AUTH — SUPABASE (HOÀN THIỆN) =======================
+function animateNumber(el, target, decimals = 2) {
+  if (!el) return;
+  const current = parseFloat(el.textContent) || 0;
+  const diff = target - current;
+  const duration = 500;
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = (current + diff * ease).toFixed(decimals);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
 
-/**
- * Dịch mã lỗi Supabase Auth sang tiếng Việt thân thiện.
- * @param {Object} error - Object lỗi từ Supabase { message, status }
- * @returns {string} Thông báo lỗi tiếng Việt
- */
+// ======================= SIDEBAR NAVIGATION =======================
+function initSidebar() {
+  // Toggle collapse
+  if (DOM.btnSidebarToggle) {
+    DOM.btnSidebarToggle.addEventListener('click', () => {
+      DOM.sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sidebar_collapsed', DOM.sidebar.classList.contains('collapsed'));
+    });
+  }
+  // Restore state
+  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+    DOM.sidebar?.classList.add('collapsed');
+  }
+
+  // Page navigation
+  $$('.sidebar-link[data-page]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = link.dataset.page;
+      switchPage(page);
+    });
+  });
+}
+
+function switchPage(pageId) {
+  $$('.page').forEach(p => p.classList.remove('active'));
+  const target = $(`#page-${pageId}`);
+  if (target) target.classList.add('active');
+
+  $$('.sidebar-link').forEach(l => l.classList.remove('active'));
+  const link = $(`.sidebar-link[data-page="${pageId}"]`);
+  if (link) link.classList.add('active');
+}
+
+// ======================= AUTH =======================
 function translateAuthError(error) {
   const msg = (error?.message || '').toLowerCase();
-  const status = error?.status;
-
-  // ── Lỗi đăng ký ──
-  if (msg.includes('user already registered') || msg.includes('already been registered'))
-    return 'Email này đã được đăng ký. Vui lòng đăng nhập hoặc dùng email khác.';
-  if (msg.includes('password') && msg.includes('at least'))
-    return 'Mật khẩu phải có ít nhất 6 ký tự.';
-  if (msg.includes('valid email') || msg.includes('invalid email'))
-    return 'Địa chỉ email không hợp lệ. Vui lòng kiểm tra lại.';
-  if (msg.includes('signup is disabled'))
-    return 'Chức năng đăng ký đã bị tắt trên server.';
-
-  // ── Lỗi đăng nhập ──
-  if (msg.includes('invalid login credentials') || msg.includes('invalid credentials'))
-    return 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
-  if (msg.includes('email not confirmed'))
-    return 'Tài khoản chưa xác nhận email. Kiểm tra hộp thư để xác nhận.';
-  if (status === 429 || msg.includes('rate limit'))
-    return 'Bạn đã thử quá nhiều lần. Vui lòng chờ 1 phút rồi thử lại.';
-
-  // ── Lỗi mạng / chung ──
-  if (msg.includes('fetch') || msg.includes('network'))
-    return 'Lỗi kết nối mạng. Kiểm tra internet và thử lại.';
-
-  return error?.message || 'Đã xảy ra lỗi không xác định.';
+  if (msg.includes('user already registered')) return 'Email đã được đăng ký.';
+  if (msg.includes('invalid login credentials')) return 'Email hoặc mật khẩu không đúng.';
+  if (msg.includes('email not confirmed')) return 'Tài khoản chưa xác nhận email.';
+  if (msg.includes('rate limit') || error?.status === 429) return 'Thử quá nhiều lần. Chờ 1 phút.';
+  if (msg.includes('password') && msg.includes('at least')) return 'Mật khẩu ít nhất 6 ký tự.';
+  if (msg.includes('valid email')) return 'Email không hợp lệ.';
+  return error?.message || 'Lỗi không xác định.';
 }
 
-/**
- * Validate email phía client trước khi gửi lên Supabase.
- * @param {string} email
- * @returns {boolean}
- */
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
 
-/**
- * Đăng nhập bằng Supabase Auth API.
- * Hiển thị lỗi màu đỏ nếu thất bại, chuyển màn hình nếu thành công.
- * @param {string} email
- * @param {string} password
- */
 async function handleLogin(email, password) {
-  // ── Validate phía client ──
-  if (!isValidEmail(email)) {
-    showAuthMessage('Địa chỉ email không hợp lệ.', 'error');
-    return;
-  }
-  if (password.length < 6) {
-    showAuthMessage('Mật khẩu phải có ít nhất 6 ký tự.', 'error');
-    return;
-  }
+  if (!isValidEmail(email)) { showAuthMessage('Email không hợp lệ.'); return; }
+  if (password.length < 6) { showAuthMessage('Mật khẩu ít nhất 6 ký tự.'); return; }
 
-  // ── Mock mode ──
   if (isUsingMockData) {
     currentUser = { ...MOCK_USER, email };
     showScreen('main');
@@ -355,90 +298,44 @@ async function handleLogin(email, password) {
     return;
   }
 
-  // ── Gọi Supabase Auth ──
   DOM.btnLogin.classList.add('loading');
   DOM.btnLogin.innerHTML = '<span class="spinner"></span> Đang đăng nhập...';
-
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // UI và trạng thái sẽ được onAuthStateChange tự động xử lý
   } catch (err) {
-    showAuthMessage(translateAuthError(err), 'error');
+    showAuthMessage(translateAuthError(err));
   } finally {
     DOM.btnLogin.classList.remove('loading');
-    DOM.btnLogin.innerHTML = '<span class="btn-icon">→</span> Đăng nhập';
+    DOM.btnLogin.textContent = 'Đăng nhập';
   }
 }
 
-/**
- * Đăng ký tài khoản mới bằng Supabase Auth API.
- * Hiển thị lỗi màu đỏ nếu thất bại, thông báo xanh nếu thành công.
- * @param {string} email
- * @param {string} password
- */
 async function signUpUser(email, password) {
-  // ── Validate phía client ──
-  if (!isValidEmail(email)) {
-    showAuthMessage('Địa chỉ email không hợp lệ.', 'error');
-    return;
-  }
-  if (password.length < 6) {
-    showAuthMessage('Mật khẩu phải có ít nhất 6 ký tự.', 'error');
-    return;
-  }
+  if (!isValidEmail(email)) { showAuthMessage('Email không hợp lệ.'); return; }
+  if (password.length < 6) { showAuthMessage('Mật khẩu ít nhất 6 ký tự.'); return; }
 
-  // ── Mock mode ──
-  if (isUsingMockData) {
-    showAuthMessage(
-      'Đăng ký thành công, vui lòng đăng nhập',
-      'success'
-    );
-    return;
-  }
+  if (isUsingMockData) { showAuthMessage('Đăng ký thành công, vui lòng đăng nhập.', 'success'); return; }
 
-  // ── Gọi Supabase Auth ──
   DOM.btnRegister.classList.add('loading');
   DOM.btnRegister.innerHTML = '<span class="spinner"></span> Đang đăng ký...';
-
   try {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-
-    // Supabase trả về user nhưng identities rỗng → email đã tồn tại
-    if (data?.user && data.user.identities?.length === 0) {
-      showAuthMessage(
-        'Email này đã được đăng ký. Vui lòng đăng nhập hoặc dùng email khác.',
-        'error'
-      );
-      return;
-    }
-
-    showAuthMessage(
-      'Đăng ký thành công, vui lòng đăng nhập',
-      'success'
-    );
+    if (data?.user?.identities?.length === 0) { showAuthMessage('Email đã được đăng ký.'); return; }
+    showAuthMessage('Đăng ký thành công, vui lòng đăng nhập.', 'success');
   } catch (err) {
-    showAuthMessage(translateAuthError(err), 'error');
+    showAuthMessage(translateAuthError(err));
   } finally {
     DOM.btnRegister.classList.remove('loading');
-    DOM.btnRegister.innerHTML = '<span class="btn-icon">+</span> Đăng ký tài khoản mới';
+    DOM.btnRegister.textContent = 'Đăng ký mới';
   }
 }
 
-/**
- * Đăng xuất — clear session và state, quay về Auth Screen.
- */
 async function handleLogout() {
   if (!isUsingMockData && supabase) {
-    try {
-      await supabase.auth.signOut();
-      // onAuthStateChange sẽ tự động clear state và quay về form Auth
-    } catch (err) {
-      console.error('[Auth] Lỗi đăng xuất:', err);
-    }
+    try { await supabase.auth.signOut(); } catch (e) { console.error(e); }
   } else {
-    // Chỉ xử lý manual khi ở chế độ Mock Data
     currentUser = null;
     courseData = [];
     simulatedCourses = [];
@@ -446,53 +343,59 @@ async function handleLogout() {
   }
 }
 
-
-// ======================= DATA — SUPABASE CRUD =======================
-
-/**
- * Tải dữ liệu môn học từ Supabase (hoặc Mock Data)
- */
+// ======================= DATA CRUD =======================
 async function loadCourseData() {
   if (isUsingMockData) {
-    const localData = localStorage.getItem('user_grades_data');
-    if (localData) {
-      try {
-        courseData = JSON.parse(localData);
-      } catch (e) {
-        courseData = [...MOCK_COURSES];
-      }
-    } else {
-      courseData = [...MOCK_COURSES];
-    }
-    simulatedCourses = [...MOCK_SIMULATED];
+    const saved = localStorage.getItem(`user_grades_data_${currentUser?.email || 'default'}`);
+    courseData = saved ? JSON.parse(saved) : [...MOCK_COURSES];
+    simulatedCourses = [];
     return;
   }
-
   try {
-    const { data, error } = await supabase
-      .from('TienTrinhHocTap')
-      .select('*')
-      .eq('user_id', currentUser.id);
-
+    const { data, error } = await supabase.from('TienTrinhHocTap').select('*').eq('user_id', currentUser.id);
     if (error) throw error;
     courseData = data || [];
+
+    // Khôi phục hoc_ky
+    const localKey = `local_semester_map_${currentUser?.email || 'default'}`;
+    const localSemesterMap = JSON.parse(localStorage.getItem(localKey) || '{}');
+    const oldLocalMap = JSON.parse(localStorage.getItem('local_semester_map') || '{}');
+
+    courseData.forEach(c => {
+      // Decode hoc_ky from ten_mon if it was saved using the fallback
+      if (c.ten_mon && c.ten_mon.includes('||')) {
+        const parts = c.ten_mon.split('||');
+        c.ten_mon = parts[0];
+        if (!c.hoc_ky) c.hoc_ky = parts[1];
+      }
+
+      // Fallback to local maps
+      if (!c.hoc_ky) {
+        if (localSemesterMap[c.ma_mon]) {
+          c.hoc_ky = localSemesterMap[c.ma_mon];
+        } else if (oldLocalMap[c.ma_mon]) {
+          c.hoc_ky = oldLocalMap[c.ma_mon];
+        }
+      }
+    });
   } catch (err) {
-    console.error('[Data] Lỗi tải dữ liệu:', err);
+    console.error('[Data] Load error:', err);
     showParseMessage('Lỗi tải dữ liệu từ server.', 'error');
   }
 }
 
-/**
- * Lưu một bản ghi mới lên Supabase
- * @param {Object} course - { ma_mon, ten_mon, tin_chi, diem_10 }
- */
 async function saveCourseToCloud(course) {
   if (isUsingMockData) {
-    const newCourse = { id: Date.now(), ...course, user_id: MOCK_USER.id };
-    courseData.push(newCourse);
-    return newCourse;
+    const existing = courseData.findIndex(c => c.ma_mon === course.ma_mon);
+    let updatedCourse;
+    if (existing >= 0) { Object.assign(courseData[existing], course); updatedCourse = courseData[existing]; }
+    else {
+      updatedCourse = { id: Date.now(), ...course, user_id: MOCK_USER.id };
+      courseData.push(updatedCourse);
+    }
+    localStorage.setItem(`user_grades_data_${currentUser?.email || 'default'}`, JSON.stringify(courseData));
+    return updatedCourse;
   }
-
   try {
     const payload = {
       user_id: currentUser.id,
@@ -502,33 +405,69 @@ async function saveCourseToCloud(course) {
       diem_10: (course.diem_10 == null) ? -1 : course.diem_10,
     };
 
-    // upsert sẽ ghi đè nếu trùng mã môn của cùng 1 user
-    const { data, error } = await supabase
+    // Chỉ gửi hoc_ky nếu có giá trị
+    if (course.hoc_ky) payload.hoc_ky = course.hoc_ky;
+
+    // Lưu vào localStorage dự phòng để luôn giữ được nhóm học kỳ
+    if (course.hoc_ky) {
+      const localKey = `local_semester_map_${currentUser?.email || 'default'}`;
+      const localSemesterMap = JSON.parse(localStorage.getItem(localKey) || '{}');
+      localSemesterMap[course.ma_mon] = course.hoc_ky;
+      localStorage.setItem(localKey, JSON.stringify(localSemesterMap));
+    }
+
+    let res = await supabase
       .from('TienTrinhHocTap')
       .upsert(payload, { onConflict: 'ma_mon, user_id' })
       .select();
 
-    if (error) throw error;
-    return data?.[0];
+    // Fallback: nếu lỗi do Supabase chưa có cột hoc_ky, thử lưu không có hoc_ky
+    if (res.error && payload.hoc_ky) {
+      console.warn('[Data] Lỗi lưu hoc_ky, thử lại không có trường này...');
+      delete payload.hoc_ky;
+      // Encode hoc_ky into ten_mon to ensure it is saved across devices
+      payload.ten_mon = `${course.ten_mon}||${course.hoc_ky}`;
+      res = await supabase
+        .from('TienTrinhHocTap')
+        .upsert(payload, { onConflict: 'ma_mon, user_id' })
+        .select();
+    }
+
+    if (res.error) throw res.error;
+    return res.data?.[0];
   } catch (err) {
-    console.error('[Data] Lỗi lưu môn:', course.ma_mon, err);
+    console.error('[Data] Save error:', course.ma_mon, err);
     throw err;
   }
 }
 
+async function deleteCourse(course) {
+  if (isUsingMockData) {
+    courseData = courseData.filter(c => c.ma_mon !== course.ma_mon);
+    localStorage.setItem(`user_grades_data_${currentUser?.email || 'default'}`, JSON.stringify(courseData));
+    return;
+  }
+  try {
+    const { error } = await supabase
+      .from('TienTrinhHocTap')
+      .delete()
+      .eq('ma_mon', course.ma_mon)
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    courseData = courseData.filter(c => c.ma_mon !== course.ma_mon);
+  } catch (err) {
+    console.error('[Data] Delete error:', err);
+    alert('Xóa thất bại: ' + err.message);
+  }
+}
 
-/**
- * Phân tích dữ liệu bảng điểm paste từ cổng thông tin đào tạo (Dính liền).
- * @param {string} rawData
- * @returns {Array<{ hocKy: string, maMon: string, tenMon: string, tinChi: number, diemHe10: number|null, diemChu: string|null }>}
- */
+// ======================= PARSER =======================
 function parsePortalData(rawData) {
   if (!rawData || typeof rawData !== 'string') return [];
   const results = [];
   const lines = rawData.split(/\n/).map(l => l.trim()).filter(Boolean);
-  let currentHocKy = "Chưa phân loại";
+  let currentHocKy = '';
 
-  // Regex dự phòng cho dữ liệu bị dính liền
   const REGEX = /^(\d{1,3})(\d{6,8})(.*?)([0-9])(M+|(?:\d\.\d)+[A-F][\+\-]?|)$/i;
 
   for (const line of lines) {
@@ -537,48 +476,27 @@ function parsePortalData(rawData) {
       continue;
     }
 
-    let maMon = null;
-    let tenMon = null;
-    let tinChi = null;
-    let diemHe10 = null;
-    let diemChu = null;
+    let maMon = null, tenMon = null, tinChi = null, diemHe10 = null, diemChu = null;
 
-    // Ưu tiên tách bằng tab nếu có (dữ liệu copy từ bảng excel/word/portal có định dạng)
     if (line.includes('\t')) {
       const cols = line.split('\t').map(c => c.trim());
-      // Nối cột 1 và 2 (do đôi khi mã môn bị tách làm 2 cột)
       maMon = cols[1];
-      let tenMonIndex = 2;
-
-      if (cols[2] && cols[2].match(/^\d+$/)) {
-        maMon += cols[2];
-        tenMonIndex = 3;
-      } else if (cols[2] === '') {
-        tenMonIndex = 3;
-      }
-
-      tenMon = cols[tenMonIndex];
-      tinChi = parseInt(cols[tenMonIndex + 1], 10);
-
-      // Tìm điểm
-      const remaining = cols.slice(tenMonIndex + 2).filter(c => c !== '');
+      let idx = 2;
+      if (cols[2] && cols[2].match(/^\d+$/)) { maMon += cols[2]; idx = 3; }
+      else if (cols[2] === '') { idx = 3; }
+      tenMon = cols[idx];
+      tinChi = parseInt(cols[idx + 1], 10);
+      const remaining = cols.slice(idx + 2).filter(c => c !== '');
       if (remaining.length > 0) {
-        if (remaining.includes('M')) {
-          diemChu = 'M';
-        } else {
-          const numScores = remaining.filter(r => !isNaN(parseFloat(r)));
-          if (numScores.length > 0) {
-            diemHe10 = parseFloat(numScores[0]);
-          }
+        if (remaining.includes('M')) { diemChu = 'M'; }
+        else {
+          const nums = remaining.filter(r => !isNaN(parseFloat(r)));
+          if (nums.length > 0) diemHe10 = parseFloat(nums[0]);
           const letters = remaining.filter(r => r.match(/^[A-F][\+\-]?$/i));
-          if (letters.length > 0) {
-            diemChu = letters[0].toUpperCase();
-          }
+          if (letters.length > 0) diemChu = letters[0].toUpperCase();
         }
       }
-    }
-    // Nếu không có Tab, thử dùng Regex cho dữ liệu dính liền
-    else {
+    } else {
       const match = line.match(REGEX);
       if (match) {
         maMon = match[2];
@@ -586,176 +504,368 @@ function parsePortalData(rawData) {
         tinChi = parseInt(match[4], 10);
         const diemRaw = match[5];
         if (diemRaw) {
-          if (diemRaw.startsWith('M')) {
-            diemChu = 'M';
-          } else {
+          if (diemRaw.startsWith('M')) { diemChu = 'M'; }
+          else {
             const numbers = diemRaw.match(/\d\.\d/g);
-            if (numbers && numbers.length >= 2) diemHe10 = parseFloat(numbers[1]);
-            else if (numbers && numbers.length === 1) diemHe10 = parseFloat(numbers[0]);
-
-            const letterMatch = diemRaw.match(/[A-F][\+\-]?$/i);
-            if (letterMatch) diemChu = letterMatch[0].toUpperCase();
+            if (numbers?.length >= 2) diemHe10 = parseFloat(numbers[1]);
+            else if (numbers?.length === 1) diemHe10 = parseFloat(numbers[0]);
+            const lm = diemRaw.match(/[A-F][\+\-]?$/i);
+            if (lm) diemChu = lm[0].toUpperCase();
           }
         }
       }
     }
 
     if (maMon && tenMon && !isNaN(tinChi)) {
-      results.push({
-        hocKy: currentHocKy,
-        ma_mon: maMon,
-        ten_mon: tenMon,
-        tin_chi: tinChi,
-        diem_10: diemHe10,
-        diem_chu: diemChu
-      });
+      results.push({ hoc_ky: currentHocKy, ma_mon: maMon, ten_mon: tenMon, tin_chi: tinChi, diem_10: diemHe10, diem_chu: diemChu });
     }
   }
-
   return results;
 }
 
-/**
- * Wrapper tương thích
- */
 function parseTranscript(rawData) {
-  return parsePortalData(rawData).filter(item => item.diem_10 !== null || item.diem_chu === 'M');
+  return parsePortalData(rawData).filter(item => {
+    // Lọc bỏ các môn học rác không hợp lệ:
+    // Giữ lại môn có điểm, môn miễn (M), hoặc môn chưa có điểm nhưng vẫn có tín chỉ
+    if (item.diem_10 !== null) return true;
+    if (item.diem_chu === 'M') return true;
+    if (item.tin_chi === 0) return false; // Loại bỏ các học phần 0 tín chỉ không có điểm
+    return true;
+  });
 }
 
+// ======================= SEMESTER MANAGEMENT =======================
+function loadSemesters() {
+  const saved = localStorage.getItem('semesters');
+  semesters = saved ? JSON.parse(saved) : [];
+  renderSemesterDropdown();
+  renderSemesterSettings();
+}
 
-// ======================= RENDER FUNCTIONS =======================
+function saveSemesters() {
+  localStorage.setItem('semesters', JSON.stringify(semesters));
+  renderSemesterDropdown();
+  renderSemesterSettings();
+}
 
-/**
- * Cập nhật toàn bộ Dashboard (GPA, Credits, Rank)
- */
+function addSemester(name) {
+  if (!name || semesters.includes(name)) return;
+  semesters.push(name);
+  saveSemesters();
+}
+
+function removeSemester(name) {
+  semesters = semesters.filter(s => s !== name);
+  saveSemesters();
+}
+
+function renderSemesterDropdown() {
+  if (!DOM.semesterSelect) return;
+  const current = DOM.semesterSelect.value;
+  DOM.semesterSelect.innerHTML = '<option value="">— Tự nhận diện từ dữ liệu —</option>';
+  semesters.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    DOM.semesterSelect.appendChild(opt);
+  });
+  DOM.semesterSelect.value = current;
+}
+
+function renderSemesterSettings() {
+  if (!DOM.semesterListSettings) return;
+  DOM.semesterListSettings.innerHTML = '';
+  if (!semesters.length) {
+    DOM.semesterListSettings.innerHTML = '<li class="text-muted text-sm" style="padding:8px 0">Chưa có học kỳ nào.</li>';
+    return;
+  }
+  semesters.forEach(s => {
+    const li = document.createElement('li');
+    li.className = 'sim-item';
+    li.innerHTML = `
+      <span class="sim-item__name">${escapeHtml(s)}</span>
+      <button class="btn-delete" title="Xóa học kỳ">✕</button>
+    `;
+    li.querySelector('.btn-delete').addEventListener('click', () => {
+      if (confirm(`Xóa học kỳ "${s}"?`)) { removeSemester(s); }
+    });
+    DOM.semesterListSettings.appendChild(li);
+  });
+}
+
+// ======================= SETTINGS =======================
+function loadSettings() {
+  const saved = localStorage.getItem('totalCreditsRequired');
+  totalCreditsRequired = saved ? parseInt(saved, 10) : 150;
+  if (DOM.settingsTotalCredits) DOM.settingsTotalCredits.value = totalCreditsRequired;
+  if (DOM.creditsTotal) DOM.creditsTotal.textContent = totalCreditsRequired;
+}
+
+function saveSettings() {
+  const val = parseInt(DOM.settingsTotalCredits?.value, 10);
+  if (isNaN(val) || val < 1) return;
+  totalCreditsRequired = val;
+  localStorage.setItem('totalCreditsRequired', totalCreditsRequired);
+  if (DOM.creditsTotal) DOM.creditsTotal.textContent = totalCreditsRequired;
+  updateDashboard();
+  showParseMessage('Đã lưu cài đặt!', 'success');
+}
+
+// ======================= RENDER =======================
 function updateDashboard() {
-  const allCourses = [...courseData];
-  const allWithSim = [...courseData, ...simulatedCourses.map(s => ({
-    tin_chi: s.tin_chi,
-    diem_10: s.diem_muc_tieu,
-  }))];
-
-  // --- GPA hiện tại (chỉ từ courseData) ---
   const gpaReal = calculateGPA(courseData);
   const creditsReal = calculateTotalCredits(courseData);
 
-  // --- GPA dự kiến (courseData + simulated) ---
-  const gpaProjected = calculateGPA(allWithSim);
-  const creditsProjected = calculateTotalCredits(allWithSim.map(c => ({ tin_chi: c.tin_chi })));
-
-  // Animate GPA value
-  animateNumber(DOM.gpaValue, gpaReal, 2);
-
-  // Credits
-  if (DOM.creditsCurrent) DOM.creditsCurrent.textContent = creditsReal;
-  if (DOM.creditsTotal) DOM.creditsTotal.textContent = TOTAL_CREDITS_REQUIRED;
-  const pct = Math.min((creditsReal / TOTAL_CREDITS_REQUIRED) * 100, 100);
-  // Delay for smooth animation
-  requestAnimationFrame(() => {
-    if (DOM.creditsProgress) DOM.creditsProgress.style.width = `${pct}%`;
-    if (DOM.creditsPercent) DOM.creditsPercent.textContent = `${pct.toFixed(1)}%`;
+  // GPA with predicted grades merged
+  const mergedForPrediction = courseData.map(c => {
+    if ((c.diem_10 === null || c.diem_10 === undefined || c.diem_10 < 0) && predictedGrades[c.ma_mon] !== undefined) {
+      return { ...c, diem_10: predictedGrades[c.ma_mon] };
+    }
+    return c;
   });
+  const gpaPredicted = calculateGPA(mergedForPrediction);
+  const hasPredictions = Object.keys(predictedGrades).length > 0;
 
-  // Rank
-  const rank = getAcademicRank(gpaReal);
-  if (DOM.rankValue) DOM.rankValue.textContent = rank;
+  const allWithSim = [...mergedForPrediction, ...simulatedCourses.map(s => ({ ten_mon: s.ten_mon, tin_chi: s.tin_chi, diem_10: s.diem_muc_tieu }))];
+  const gpaProjected = calculateGPA(allWithSim);
+  const creditsProjected = calculateTotalCredits(allWithSim);
 
-  // Sim summary
-  if (simulatedCourses.length > 0) {
-    if (DOM.simSummary) DOM.simSummary.style.display = 'flex';
-    if (DOM.simGpaProjected) animateNumber(DOM.simGpaProjected, gpaProjected, 2);
-    if (DOM.simCreditsProjected) DOM.simCreditsProjected.textContent = creditsProjected;
-  } else {
-    if (DOM.simSummary) DOM.simSummary.style.display = 'none';
+  animateNumber(DOM.gpaValue, hasPredictions ? gpaPredicted : gpaReal, 2);
+  if (hasPredictions && DOM.gpaValue) {
+    DOM.gpaValue.classList.add('stat-value--predicted');
+  } else if (DOM.gpaValue) {
+    DOM.gpaValue.classList.remove('stat-value--predicted');
+    DOM.gpaValue.classList.add('stat-value--primary');
   }
 
-  // Pulse animation
+  if (DOM.creditsCurrent) DOM.creditsCurrent.textContent = creditsReal;
+  if (DOM.creditsTotal) DOM.creditsTotal.textContent = totalCreditsRequired;
+
+  const pct = Math.min((creditsReal / totalCreditsRequired) * 100, 100);
+  if (DOM.creditsProgress) DOM.creditsProgress.style.width = `${pct}%`;
+
+  const rank = getAcademicRank(hasPredictions ? gpaPredicted : gpaReal);
+  if (DOM.rankValue) DOM.rankValue.textContent = rank;
+
+  if (DOM.simGpaProjected) animateNumber(DOM.simGpaProjected, gpaProjected, 2);
+  if (DOM.simCreditsProjected) DOM.simCreditsProjected.textContent = creditsProjected;
+
   if (DOM.gpaValue) {
     DOM.gpaValue.classList.add('gpa-updated');
     setTimeout(() => DOM.gpaValue.classList.remove('gpa-updated'), 500);
   }
 }
 
-/**
- * Animate a number from current to target
- */
-function animateNumber(el, target, decimals = 2) {
-  const current = parseFloat(el.textContent) || 0;
-  const diff = target - current;
-  const duration = 600;
-  const startTime = performance.now();
-
-  function update(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    // Ease out cubic
-    const ease = 1 - Math.pow(1 - progress, 3);
-    const val = current + diff * ease;
-    el.textContent = val.toFixed(decimals);
-    if (progress < 1) requestAnimationFrame(update);
-  }
-  requestAnimationFrame(update);
-}
-
-/**
- * Render bảng môn học
- */
 function renderCourseTable() {
-  if (!DOM.courseTbody) return;
-  DOM.courseTbody.innerHTML = '';
+  const tbody = DOM.courseTbody;
+  if (!tbody) return;
+  tbody.innerHTML = '';
 
   if (!courseData.length) {
-    if (DOM.tableEmpty) {
-      DOM.tableEmpty.classList.remove('hidden');
-      DOM.tableEmpty.style.display = 'block';
-    }
+    if (DOM.welcomeView) DOM.welcomeView.style.display = 'block';
+    if (DOM.dataView) DOM.dataView.style.display = 'none';
+    if (DOM.tableEmpty) DOM.tableEmpty.style.display = 'block';
     return;
   }
-
+  
+  if (DOM.welcomeView) DOM.welcomeView.style.display = 'none';
+  if (DOM.dataView) DOM.dataView.style.display = 'block';
   if (DOM.tableEmpty) DOM.tableEmpty.style.display = 'none';
 
-  courseData.forEach((course, idx) => {
-    // Dùng hàm mới getGradeInfo (thay thế convertTo4Scale + getLetterGrade cũ)
-    const gradeInfo = getGradeInfo(course.diem_10);
-    const isExempt = gradeInfo.diemChu === 'M';
+  // Nhóm theo học kỳ
+  const grouped = {};
+  courseData.forEach(c => {
+    const key = c.hoc_ky || 'Chưa phân loại';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(c);
+  });
 
-    const tr = document.createElement('tr');
-    tr.style.animationDelay = `${idx * 0.05}s`;
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><strong>${escapeHtml(course.ma_mon)}</strong></td>
-      <td>${escapeHtml(course.ten_mon)}</td>
-      <td>${course.tin_chi}</td>
-      <td>${isExempt ? 'M' : course.diem_10.toFixed(1)}</td>
-      <td>${gradeInfo.diemHe4.toFixed(1)}</td>
-      <td><span class="grade-badge grade-badge--${gradeInfo.cssClass}">${gradeInfo.diemChu}</span></td>
+  let globalIdx = 1;
+  let cumGPA4 = 0; // Cumulative GPA 4 calculations need to track overall academic courses up to this semester? 
+  // Wait, the image shows "Điểm trung bình tích lũy", this means we should compute cumulative based on all courses? 
+  // Let's just use the current courseData for cumulative. 
+  const allGPA4 = calculateGPA(courseData);
+  const allGPA10 = calculateGPA10(courseData);
+  const allTC = calculateTotalCredits(courseData);
+
+  // Hàm phụ trợ trích xuất năm học và học kỳ để sắp xếp
+  function getSemesterScore(str) {
+    // Tìm cấu trúc "học kỳ 1" và "2024"
+    const match = str.match(/(?:học\s*kỳ|hk)\s*(\d+).*?(\d{4})/i);
+    if (match) {
+      const sem = parseInt(match[1], 10);
+      const year = parseInt(match[2], 10);
+      return year * 10 + sem; // VD: 20241, 20242, 20251
+    }
+    return 0; // Giá trị thấp nhất nếu không nhận diện được
+  }
+
+  // Sắp xếp các học kỳ từ mới nhất đến cũ nhất (từ dưới lên trên theo thời gian)
+  const sortedSemesters = Object.entries(grouped).sort((a, b) => {
+    if (a[0] === 'Chưa phân loại' || a[0] === 'Học kỳ chưa xác định') return 1;
+    if (b[0] === 'Chưa phân loại' || b[0] === 'Học kỳ chưa xác định') return -1;
+    
+    const scoreA = getSemesterScore(a[0]);
+    const scoreB = getSemesterScore(b[0]);
+    
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA; // Giảm dần
+    }
+    
+    // Nếu cùng điểm thì dùng localeCompare ngược
+    return b[0].localeCompare(a[0]);
+  });
+
+  sortedSemesters.forEach(([semester, courses]) => {
+    // 1. Dòng tiêu đề học kỳ (Xám)
+    const headerTr = document.createElement('tr');
+    headerTr.className = 'semester-group-header';
+    headerTr.innerHTML = `<td colspan="8">${escapeHtml(semester)}</td>`;
+    tbody.appendChild(headerTr);
+
+    // 2. Các môn học
+    courses.forEach(course => {
+      const excluded = isExcludedFromGPA(course);
+      const gradeInfo = getGradeInfo(course.diem_10);
+      const isExempt = gradeInfo.diemChu === 'M' || course.diem_chu === 'M';
+      const hasScore = course.diem_10 !== null && course.diem_10 !== undefined && course.diem_10 >= 0;
+
+      const tr = document.createElement('tr');
+      if (excluded) tr.className = 'excluded-row';
+
+      let scoreCell, gradeCell, diem4Cell;
+
+      if (hasScore) {
+        scoreCell = course.diem_10.toFixed(1);
+        gradeCell = `<span class="grade-badge grade-badge--${gradeInfo.cssClass}">${gradeInfo.diemChu}</span>`;
+        diem4Cell = gradeInfo.diemHe4.toFixed(1);
+      } else if (isExempt) {
+        scoreCell = '<span class="grade-badge grade-badge--m">M</span>';
+        gradeCell = '<span class="grade-badge grade-badge--m">M</span>';
+        diem4Cell = '—';
+      } else {
+        const predicted = predictedGrades[course.ma_mon];
+        scoreCell = `<input type="number" class="predict-grade-input" data-ma="${escapeHtml(course.ma_mon)}" step="0.1" min="0" max="10" placeholder="?.?" value="${predicted !== undefined ? predicted : ''}">`;
+        if (predicted !== undefined) {
+          const pInfo = getGradeInfo(predicted);
+          gradeCell = `<span class="grade-badge grade-badge--predicted">${pInfo.diemChu}?</span>`;
+          diem4Cell = `<span style="color:#8e44ad">${pInfo.diemHe4.toFixed(1)}?</span>`;
+        } else {
+          gradeCell = '—';
+          diem4Cell = '—';
+        }
+      }
+
+      tr.innerHTML = `
+        <td>${globalIdx++}</td>
+        <td><strong>${escapeHtml(course.ma_mon)}</strong></td>
+        <td class="td-name">${escapeHtml(course.ten_mon)}${excluded ? ' <small class="tag-excluded">(KTT)</small>' : ''}</td>
+        <td>${course.tin_chi}</td>
+        <td>${scoreCell}</td>
+        <td>${diem4Cell}</td>
+        <td>${gradeCell}</td>
+        <td><button class="btn-delete btn-delete-course" data-ma="${escapeHtml(course.ma_mon)}" title="Xóa">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // 3. Tính toán thống kê cho học kỳ
+    const semGPA4 = calculateGPA(courses);
+    const semGPA10 = calculateGPA10(courses);
+    const semTC = calculateTotalCredits(courses);
+    const rank = getAcademicRank(semGPA4);
+
+    // 4. Dòng tổng kết học kỳ (Xanh dương)
+    const summaryTr = document.createElement('tr');
+    summaryTr.className = 'semester-summary-row';
+    summaryTr.innerHTML = `
+      <td colspan="4">
+        <div class="semester-summary-col">
+          <div class="semester-summary-item">
+            <span>- Điểm trung bình học kỳ hệ 4:</span>
+            <span class="semester-summary-val">${semGPA4.toFixed(2)}</span>
+          </div>
+          <div class="semester-summary-item">
+            <span>- Điểm trung bình học kỳ hệ 10:</span>
+            <span class="semester-summary-val">${semGPA10.toFixed(2)}</span>
+          </div>
+          <div class="semester-summary-item">
+            <span>- Số tín chỉ đạt học kỳ:</span>
+            <span class="semester-summary-val">${semTC}</span>
+          </div>
+        </div>
+      </td>
+      <td colspan="4">
+        <div class="semester-summary-col">
+          <div class="semester-summary-item" style="color: #64748b;">
+            <span>- Điểm trung bình tích lũy hệ 4:</span>
+            <span class="semester-summary-val">${allGPA4.toFixed(2)}</span>
+          </div>
+          <div class="semester-summary-item" style="color: #64748b;">
+            <span>- Điểm trung bình tích lũy hệ 10:</span>
+            <span class="semester-summary-val">${allGPA10.toFixed(2)}</span>
+          </div>
+          <div class="semester-summary-item" style="color: #64748b;">
+            <span>- Số tín chỉ tích lũy:</span>
+            <span class="semester-summary-val">${allTC}</span>
+          </div>
+        </div>
+      </td>
     `;
-    DOM.courseTbody.appendChild(tr);
+    // We can also add Rank but let's keep it clean
+    tbody.appendChild(summaryTr);
+  });
+
+  // Bind prediction inputs
+  tbody.querySelectorAll('.predict-grade-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const ma = input.dataset.ma;
+      const val = parseFloat(input.value);
+      if (!isNaN(val) && val >= 0 && val <= 10) predictedGrades[ma] = val;
+      else delete predictedGrades[ma];
+      updateDashboard();
+      renderGradeDistribution();
+    });
+  });
+
+  // Bind delete buttons
+  tbody.querySelectorAll('.btn-delete-course').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ma = btn.dataset.ma;
+      const course = courseData.find(c => c.ma_mon === ma);
+      if (!course) return;
+      if (!confirm(`Xóa "${course.ten_mon}"?`)) return;
+      await deleteCourse(course);
+      renderCourseTable();
+      renderGradeDistribution();
+      updateDashboard();
+    });
   });
 }
 
-/**
- * Render biểu đồ phân bố điểm
- */
 function renderGradeDistribution() {
+  if (!DOM.gradeDistribution) return;
   const counts = { a: 0, b: 0, c: 0, d: 0, f: 0 };
-  const total = courseData.length;
-
+  let total = 0;
   courseData.forEach(c => {
-    const gradeInfo = getGradeInfo(c.diem_10);
-    counts[gradeInfo.cssClass]++;
+    const score = c.diem_10 ?? predictedGrades[c.ma_mon] ?? null;
+    if (score === null || score === undefined || score < 0) return;
+    const gi = getGradeInfo(score);
+    if (gi.cssClass !== 'm' && counts[gi.cssClass] !== undefined) {
+      counts[gi.cssClass]++;
+      total++;
+    }
   });
 
   const labels = [
     { key: 'a', label: 'A', fill: 'a' },
-    { key: 'b', label: 'B', fill: 'b' },
-    { key: 'c', label: 'C', fill: 'c' },
-    { key: 'd', label: 'D', fill: 'd' },
+    { key: 'b', label: 'B/B+', fill: 'b' },
+    { key: 'c', label: 'C/C+', fill: 'c' },
+    { key: 'd', label: 'D/D+', fill: 'd' },
     { key: 'f', label: 'F', fill: 'f' },
   ];
 
   DOM.gradeDistribution.innerHTML = '';
-
   labels.forEach(({ key, label, fill }) => {
     const pct = total > 0 ? (counts[key] / total) * 100 : 0;
     const row = document.createElement('div');
@@ -763,25 +873,19 @@ function renderGradeDistribution() {
     row.innerHTML = `
       <span class="grade-bar-label">${label}</span>
       <div class="grade-bar-track">
-        <div class="grade-bar-fill grade-bar-fill--${fill}" style="width: 0%;"></div>
+        <div class="grade-bar-fill grade-bar-fill--${fill}" style="width:0%"></div>
       </div>
       <span class="grade-bar-count">${counts[key]}</span>
     `;
     DOM.gradeDistribution.appendChild(row);
-
-    // Animate bar width
     requestAnimationFrame(() => {
-      setTimeout(() => {
-        row.querySelector('.grade-bar-fill').style.width = `${pct}%`;
-      }, 100);
+      setTimeout(() => { row.querySelector('.grade-bar-fill').style.width = `${pct}%`; }, 80);
     });
   });
 }
 
-/**
- * Render danh sách môn giả lập
- */
 function renderSimulatedList() {
+  if (!DOM.simList || !DOM.simCount) return;
   DOM.simList.innerHTML = '';
   DOM.simCount.textContent = simulatedCourses.length;
 
@@ -791,38 +895,33 @@ function renderSimulatedList() {
     li.innerHTML = `
       <div class="sim-item__info">
         <span class="sim-item__name">${escapeHtml(sim.ten_mon)}</span>
-        <span class="sim-item__meta">${sim.tin_chi} TC · Điểm mục tiêu: ${sim.diem_muc_tieu.toFixed(1)}</span>
+        <span class="sim-item__meta">${sim.tin_chi} TC · Mục tiêu: ${sim.diem_muc_tieu.toFixed(1)}</span>
       </div>
-      <button class="sim-item__delete" data-idx="${idx}" title="Xóa" aria-label="Xóa môn ${escapeHtml(sim.ten_mon)}">✕</button>
+      <button class="sim-item__delete" data-idx="${idx}" title="Xóa">✕</button>
     `;
     DOM.simList.appendChild(li);
   });
 
-  // Attach delete listeners
   DOM.simList.querySelectorAll('.sim-item__delete').forEach(btn => {
     btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      simulatedCourses.splice(idx, 1);
+      simulatedCourses.splice(parseInt(btn.dataset.idx, 10), 1);
       renderSimulatedList();
       updateDashboard();
     });
   });
 }
 
-
-// ======================= HELPER =======================
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-
 // ======================= EVENT HANDLERS =======================
-
 function onAuthSuccess() {
   if (DOM.userEmailDisplay) DOM.userEmailDisplay.textContent = currentUser?.email || '';
   loadCourseData().then(() => {
+    // Auto-discover semesters from data
+    courseData.forEach(c => {
+      if (c.hoc_ky && !semesters.includes(c.hoc_ky)) {
+        semesters.push(c.hoc_ky);
+      }
+    });
+    saveSemesters();
     renderCourseTable();
     renderGradeDistribution();
     renderSimulatedList();
@@ -831,105 +930,160 @@ function onAuthSuccess() {
 }
 
 function bindEvents() {
-  // --- Auth Form ---
+  // Auth
   if (DOM.authForm) {
-    DOM.authForm.addEventListener('submit', (e) => {
+    DOM.authForm.addEventListener('submit', e => {
       e.preventDefault();
-      const email = DOM.authEmail.value.trim();
-      const password = DOM.authPassword.value;
-      if (!email || !password) {
-        showAuthMessage('Vui lòng nhập đầy đủ email và mật khẩu.');
-        return;
-      }
-      handleLogin(email, password);
+      handleLogin(DOM.authEmail.value.trim(), DOM.authPassword.value);
     });
   }
-
   if (DOM.btnRegister) {
     DOM.btnRegister.addEventListener('click', () => {
-      const email = DOM.authEmail.value.trim();
-      const password = DOM.authPassword.value;
-      if (!email || !password) {
-        showAuthMessage('Vui lòng nhập email và mật khẩu để đăng ký.', 'error');
-        return;
+      signUpUser(DOM.authEmail.value.trim(), DOM.authPassword.value);
+    });
+  }
+  if (DOM.btnLogout) DOM.btnLogout.addEventListener('click', handleLogout);
+  const navAvatar = $('#nav-avatar');
+  if (navAvatar) navAvatar.addEventListener('click', handleLogout);
+
+  // Settings
+  if (DOM.btnSaveSettings) DOM.btnSaveSettings.addEventListener('click', saveSettings);
+
+  // Add Semester
+  if (DOM.btnAddSemester) {
+    DOM.btnAddSemester.addEventListener('click', () => {
+      const name = prompt('Nhập tên học kỳ (VD: Học kỳ 1 - Năm 2):');
+      if (name && name.trim()) {
+        addSemester(name.trim());
+        DOM.semesterSelect.value = name.trim();
       }
-      // Gọi hàm signUpUser mới (YÊU CẦU 2) — validate bên trong
-      signUpUser(email, password);
     });
   }
 
-  if (DOM.btnLogout) DOM.btnLogout.addEventListener('click', handleLogout);
+  // Manual Add / New Buttons
+  if (DOM.btnManualAdd) {
+    DOM.btnManualAdd.addEventListener('click', () => {
+      const name = prompt('Nhập tên học kỳ (VD: Học kỳ 1 - Năm 2):');
+      if (name && name.trim()) {
+        addSemester(name.trim());
+        if (DOM.semesterSelect) DOM.semesterSelect.value = name.trim();
+        switchPage('dashboard');
+      }
+    });
+  }
+  if (DOM.btnGotoRoadmap) {
+    DOM.btnGotoRoadmap.addEventListener('click', () => switchPage('roadmap'));
+  }
 
-  // --- Theme Toggle ---
-  if (DOM.themeToggle) DOM.themeToggle.addEventListener('click', toggleTheme);
+  // Modal Handlers
+  if (DOM.btnOpenModal) {
+    DOM.btnOpenModal.forEach(btn => btn.addEventListener('click', () => {
+      if (DOM.portalModal) DOM.portalModal.classList.add('active');
+    }));
+  }
+  if (DOM.btnCloseModal) DOM.btnCloseModal.addEventListener('click', () => {
+    if (DOM.portalModal) DOM.portalModal.classList.remove('active');
+  });
+  if (DOM.btnCancelModal) DOM.btnCancelModal.addEventListener('click', () => {
+    if (DOM.portalModal) DOM.portalModal.classList.remove('active');
+  });
 
+  // Textarea input monitor
+  if (DOM.inputTranscript) {
+    DOM.inputTranscript.addEventListener('input', (e) => {
+      const text = e.target.value.trim();
+      if (text.length > 20) {
+        if (DOM.modalStatusText) DOM.modalStatusText.innerHTML = '<span class="status-dot" style="background:#22c55e"></span> SẴN SÀNG';
+        if (DOM.btnParseSave) {
+          DOM.btnParseSave.disabled = false;
+          DOM.btnParseSave.style = 'background-color: #4f46e5; color: #ffffff; cursor: pointer; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px;';
+        }
+      } else {
+        if (DOM.modalStatusText) DOM.modalStatusText.innerHTML = '<span class="status-dot"></span> CHỜ DỮ LIỆU';
+        if (DOM.btnParseSave) {
+          DOM.btnParseSave.disabled = true;
+          DOM.btnParseSave.style = 'background-color: #e2e8f0; color: #94a3b8; border: none; cursor: not-allowed; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px;';
+        }
+      }
+    });
+  }
+
+  // Parse & Save
   if (DOM.btnParseSave) {
     DOM.btnParseSave.addEventListener('click', async () => {
-      const text = DOM.inputTranscript.value.trim();
-      if (!text) {
-        showParseMessage('Vui lòng nhập bảng điểm trước.', 'error');
-        return;
-      }
+      const text = DOM.inputTranscript?.value?.trim();
+      if (!text) { showParseMessage('Vui lòng dán bảng điểm trước.', 'error'); return; }
 
       const parsed = parseTranscript(text);
-      if (!parsed.length) {
-        showParseMessage('Không phân tích được dữ liệu. Kiểm tra định dạng.', 'error');
-        return;
-      }
+      if (!parsed.length) { showParseMessage('Không tìm thấy dữ liệu. Kiểm tra định dạng.', 'error'); return; }
+
+      // Assign semester
+      const selectedSemester = DOM.semesterSelect?.value || '';
+      parsed.forEach(c => {
+        if (selectedSemester) c.hoc_ky = selectedSemester;
+        else if (c.hoc_ky) { /* keep auto-detected */ }
+        else c.hoc_ky = 'Chưa phân loại';
+      });
 
       DOM.btnParseSave.classList.add('loading');
       DOM.btnParseSave.innerHTML = '<span class="spinner"></span> Đang lưu...';
 
-      let successCount = 0;
-
+      let ok = 0;
       if (isUsingMockData) {
-        // Lưu toàn bộ dữ liệu bóc tách vào localStorage (Ghi đè hoặc nối thêm)
-        // Theo yêu cầu: lập tức lưu cục JSON đó vào localStorage
-        courseData = [...parsed];
-        localStorage.setItem('user_grades_data', JSON.stringify(courseData));
-        successCount = parsed.length;
+        parsed.forEach(c => {
+          const idx = courseData.findIndex(x => x.ma_mon === c.ma_mon);
+          if (idx >= 0) Object.assign(courseData[idx], c);
+          else courseData.push({ id: Date.now() + ok, ...c, user_id: MOCK_USER.id });
+          ok++;
+        });
+        localStorage.setItem(`user_grades_data_${currentUser?.email || 'default'}`, JSON.stringify(courseData));
       } else {
         for (const course of parsed) {
-          try {
-            await saveCourseToCloud(course);
-            successCount++;
-          } catch (err) {
-            console.error(`Lỗi lưu môn "${course.ten_mon}":`, err.message);
-            // Không đè thông báo liên tục, chỉ hiển thị lỗi cuối cùng ở log
-          }
+          try { await saveCourseToCloud(course); ok++; } catch (e) { console.error(`Lỗi: ${course.ten_mon}`, e); }
         }
+        // Re-fetch from server to sync
+        await loadCourseData();
       }
 
       DOM.btnParseSave.classList.remove('loading');
-      DOM.btnParseSave.innerHTML = 'Nhập dữ liệu từ Portal';
+      DOM.btnParseSave.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Phân tích & Lưu';
 
-      if (successCount > 0) {
-        if (successCount < parsed.length) {
-          showParseMessage(`Lưu thành công ${successCount}/${parsed.length} môn. Xem Console (F12) để biết lỗi môn bị thiếu.`, 'error');
-        } else {
-          showParseMessage(`Đã lưu thành công ${successCount}/${parsed.length} môn học!`, 'success');
-        }
+      if (ok > 0) {
+        showParseMessage(ok < parsed.length
+          ? `Lưu ${ok}/${parsed.length} môn. Xem Console (F12) cho lỗi.`
+          : `Thành công! Đã lưu ${ok} môn học.`,
+          ok < parsed.length ? 'error' : 'success'
+        );
         DOM.inputTranscript.value = '';
-        if (DOM.courseTbody) renderCourseTable();
-        if (DOM.gradeDistribution) renderGradeDistribution();
+        if (DOM.portalModal) DOM.portalModal.classList.remove('active');
+        if (DOM.modalStatusText) DOM.modalStatusText.innerHTML = '<span class="status-dot"></span> CHỜ DỮ LIỆU';
+        if (DOM.btnParseSave) {
+          DOM.btnParseSave.disabled = true;
+          DOM.btnParseSave.style = 'background-color: #e2e8f0; color: #94a3b8; border: none; cursor: not-allowed; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px;';
+        }
+        
+        // Auto-add semester
+        parsed.forEach(c => {
+          if (c.hoc_ky && !semesters.includes(c.hoc_ky)) semesters.push(c.hoc_ky);
+        });
+        saveSemesters();
+        renderCourseTable();
+        renderGradeDistribution();
         updateDashboard();
-      } else if (parsed.length > 0) {
-        showParseMessage('Lưu thất bại toàn bộ môn học. Vui lòng kiểm tra Console (F12).', 'error');
+      } else {
+        showParseMessage('Lưu thất bại toàn bộ. Kiểm tra Console.', 'error');
       }
     });
   }
 
-  // --- Simulation Form ---
+  // Simulation
   if (DOM.simForm) {
-    DOM.simForm.addEventListener('submit', (e) => {
+    DOM.simForm.addEventListener('submit', e => {
       e.preventDefault();
-      const name = DOM.simName.value.trim();
-      const credits = parseInt(DOM.simCredits.value, 10);
-      const grade = parseFloat(DOM.simGrade.value);
-
-      if (!name || isNaN(credits) || isNaN(grade)) {
-        return;
-      }
+      const name = DOM.simName?.value?.trim();
+      const credits = parseInt(DOM.simCredits?.value, 10);
+      const grade = parseFloat(DOM.simGrade?.value);
+      if (!name || isNaN(credits) || isNaN(grade)) return;
 
       simulatedCourses.push({
         id: Date.now(),
@@ -937,43 +1091,33 @@ function bindEvents() {
         tin_chi: credits,
         diem_muc_tieu: Math.min(Math.max(grade, 0), 10),
       });
-
-      // Reset form
       DOM.simName.value = '';
       DOM.simCredits.value = '';
       DOM.simGrade.value = '';
       DOM.simName.focus();
-
-      if (DOM.simList) renderSimulatedList();
+      renderSimulatedList();
       updateDashboard();
     });
   }
 }
 
-
-// ======================= APP INITIALIZATION =======================
+// ======================= INIT =======================
 async function init() {
-  // 1. Set theme
-  initTheme();
-
-  // 2. Initialize Supabase
   await initSupabase();
-
-  // 3. Bind events
+  loadSettings();
+  loadSemesters();
+  initSidebar();
   bindEvents();
 
-  // 4. Quản lý Auth State Global (Chống lặp vô tận & tự động điều hướng)
   if (!isUsingMockData && supabase) {
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Chỉ cập nhật nếu user thực sự thay đổi (tránh gọi onAuthSuccess nhiều lần)
         if (!currentUser || currentUser.id !== session.user.id) {
           currentUser = session.user;
           showScreen('main');
           onAuthSuccess();
         }
       } else {
-        // Session là null (chưa đăng nhập / đăng xuất) -> Ẩn toàn bộ, hiện Form Login
         currentUser = null;
         courseData = [];
         simulatedCourses = [];
@@ -981,10 +1125,8 @@ async function init() {
       }
     });
   } else {
-    // Mock Data mode: Mặc định hiện Form Login
     showScreen('auth');
   }
 }
 
-// Run app
 init();

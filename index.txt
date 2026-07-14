@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Credit & GPA Strategist — Quản lý tiến độ học tập và chiến lược điểm số." />
+  <title>Credit & GPA Strategist | Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <!-- =================== AUTH SCREEN ==================== -->
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <img src="assets/logo.jpg" alt="Logo TVU" class="auth-logo" />
+      <h1 class="auth-title">Credit & GPA Strategist</h1>
+      <p class="auth-subtitle">Quản lý tiến độ & chiến lược điểm số</p>
+
+      <form id="auth-form" class="auth-form">
+        <input type="email" id="auth-email" class="soft-input mb-15" placeholder="Email" required />
+        <input type="password" id="auth-password" class="soft-input mb-24" placeholder="Mật khẩu" required
+          minlength="6" />
+        <div id="auth-message" class="auth-message"></div>
+        <button type="submit" id="btn-login" class="btn-primary w-100 mb-15">Đăng nhập</button>
+        <button type="button" id="btn-register" class="btn-outline w-100">Đăng ký mới</button>
+      </form>
+
+      <p class="auth-footer">Dữ liệu đ�  <!-- =================== MAIN APP ======================== -->
+  <section id="main-app" class="main-app" style="display: none;">
+
+    <!-- TOP NAV -->
+    <header class="top-nav">
+      <div class="top-nav-container">
+        <div class="nav-brand">
+          <div class="logo-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <span style="font-weight: 800; font-size: 18px; color: #1e293b; letter-spacing: -0.5px;">HUFLIT</span>
+        </div>
+        <nav class="nav-links">
+          <a href="#" class="nav-link active" data-page="dashboard">Nhập điểm</a>
+          <a href="#" class="nav-link" data-page="roadmap">Lộ trình</a>
+          <a href="#" class="nav-link">Môn lẻ</a>
+          <a href="#" class="nav-link">Thang điểm</a>
+          <a href="#" class="nav-link">Tin tức</a>
+        </nav>
+        <div class="nav-user">
+          <div class="avatar" id="nav-avatar" title="Đăng xuất">
+            <img src="https://ui-avatars.com/api/?name=User&background=eff6ff&color=4f46e5" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #e2e8f0; cursor: pointer;">
+          </div>
+          <button id="btn-logout" class="nav-logout" title="Đăng xuất" style="display:none;">Thoát</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- DASHBOARD LAYOUT -->
+    <main class="dashboard-layout">
+      
+      <!-- CỘT TRÁI (LEFT SIDEBAR) -->
+      <aside class="dashboard-left">
+        <!-- Tổng kết -->
+        <div class="soft-card">
+          <div class="card-header space-between" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>
+              <h3 style="margin:0; font-size: 16px; color: #0f172a; font-weight: 800;">Tổng kết</h3>
+            </div>
+            <button class="btn-icon" title="Làm mới"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.27l-3.26-3.26"></path></svg></button>
+          </div>
+          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 16px;">
+            <div class="stat-box">
+              <div class="stat-box-label">GPA HIỆN TẠI</div>
+              <div class="stat-box-val" id="gpa-value">0.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">TÍCH LŨY</div>
+              <div class="stat-box-val" id="credits-current">0</div>
+            </div>
+          </div>
+          <button class="btn-outline w-100 btn-open-modal" style="color: #4f46e5; border-color: #4f46e5; display: flex; justify-content: center; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span style="font-weight: 600;">Nhập dữ liệu từ Portal</span>
+          </button>
+        </div>
+
+        <!-- Mô phỏng (Roadmap Preview) -->
+        <div class="soft-card">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 800; color: #6366f1; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase;">GPA Tích Lũy Mới</div>
+            <div style="font-size: 42px; font-weight: 900; color: #ef4444;" id="sim-gpa-projected">0.00</div>
+          </div>
+          <div class="stats-grid" style="grid-template-columns: 1fr 1fr; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-bottom: 20px;">
+            <div style="text-align: center; border-right: 1px solid #f1f5f9;">
+              <div class="stat-box-label">TÍN CHỈ</div>
+              <div class="stat-box-val" id="sim-credits-projected">0</div>
+            </div>
+            <div style="text-align: center;">
+              <div class="stat-box-label">XẾP LOẠI</div>
+              <div class="stat-box-val" id="rank-value">Kém</div>
+            </div>
+          </div>
+          <button class="btn-primary w-100" id="btn-goto-roadmap">Tìm Lộ trình Học Tập</button>
+        </div>
+      </aside>
+
+      <!-- CỘT PHẢI (RIGHT CONTENT) -->
+      <section class="dashboard-right">
+        
+        <!-- TRẠNG THÁI EMPTY (WELCOME) -->
+        <div id="welcome-view">
+          <div class="soft-card" style="text-align: center; padding: 48px 24px; margin-bottom: 20px;">
+            <h1 style="font-size: 30px; font-weight: 800; color: #1e293b; margin-bottom: 12px; letter-spacing: -0.5px;">Chào mừng bạn đến với HUFLIT GPA Strategist</h1>
+            <p style="color: #64748b; font-size: 16px; margin: 0;">Công cụ tính điểm GPA và lập lộ trình học tập dành cho sinh viên HUFLIT.</p>
+          </div>
+
+          <div class="grid-2-col" style="margin-bottom: 20px;">
+            <div class="soft-card" style="display: flex; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                <span class="badge" style="background: #4f46e5; color: white; padding: 4px 10px; font-size: 11px;">CÁCH 1: ĐỒNG BỘ PORTAL</span>
+                <span class="badge" style="background: #fef08a; color: #854d0e; padding: 4px 10px; font-size: 11px;">Xong trong 5s</span>
+              </div>
+              <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">Nhập dữ liệu tự động từ Portal</h2>
+              <p style="color: #64748b; font-size: 14px; margin-bottom: 24px; line-height: 1.6; flex-grow: 1;">Tự động điền tất cả các học kỳ và môn học có sẵn trên Portal trường mà không cần nhập tay từng dòng môn học.</p>
+              <button class="btn-primary w-100 btn-open-modal" style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Nhập dữ liệu từ Portal
+              </button>
+            </div>
+
+            <div class="soft-card" style="display: flex; flex-direction: column;">
+              <div style="margin-bottom: 16px;">
+                <span class="badge" style="background: #e2e8f0; color: #475569; padding: 4px 10px; font-size: 11px;">CÁCH 2: NHẬP THỦ CÔNG</span>
+              </div>
+              <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">Tạo học kỳ & Tự điền điểm</h2>
+              <p style="color: #64748b; font-size: 14px; margin-bottom: 24px; line-height: 1.6; flex-grow: 1;">Tự thêm học kỳ mới và điền điểm giả lập các môn học để tính toán thử điểm số mong muốn của bạn trong tương lai.</p>
+              <button class="btn-outline w-100" id="btn-manual-add" style="color: #475569; border-color: #cbd5e1;">Thêm học kỳ & Nhập thủ công</button>
+            </div>
+          </div>
+
+          <div class="soft-card" style="background-color: #fefce8; border: 1px solid #fef08a;">
+            <h3 style="font-size: 13px; font-weight: 800; color: #a16207; margin-top: 0; margin-bottom: 8px;">MẸO LẬP LỘ TRÌNH HỌC TẬP (TAB LỘ TRÌNH)</h3>
+            <p style="color: #854d0e; font-size: 14px; margin: 0; line-height: 1.6;">Sau khi có điểm, hãy chuyển sang tab <strong>Lộ trình</strong> và điền GPA mục tiêu để hệ thống tự động tính điểm tối thiểu cần đạt ở các kỳ còn lại.</p>
+          </div>
+        </div>
+
+        <!-- TRẠNG THÁI CÓ DỮ LIỆU (DATA VIEW) -->
+        <div id="data-view" class="page active" data-page-name="dashboard" style="display: none;">
+          <!-- Bảng điểm -->
+          <div class="soft-card" id="section-table">
+            <h2 class="card-title">
+              <svg class="icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Lịch sử Môn học
+            </h2>
+            <div class="table-wrapper">
+              <table class="soft-table" id="course-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Mã MH</th>
+                    <th>Tên môn học</th>
+                    <th>Số tín chỉ</th>
+                    <th>Điểm TK (10)</th>
+                    <th>Điểm TK (4)</th>
+                    <th>Điểm TK (C)</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="course-tbody">
+                  <!-- JS Render -->
+                </tbody>
+              </table>
+              <div id="table-empty" class="empty-state" style="display:none; padding: 20px; text-align: center; color: var(--text-muted);">
+                <p>📭 Chưa có dữ liệu. Hãy nhập điểm ở cột bên trái.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Biểu đồ -->
+          <div class="soft-card" id="section-chart">
+            <h2 class="card-title">
+              <svg class="icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-8"/></svg>
+              Phân bố Điểm số
+            </h2>
+            <div id="grade-distribution" class="grade-distribution"></div>
+          </div>
+        </div>
+
+        <!-- PAGE ROADMAP (Lộ trình giả lập) -->
+        <div id="page-roadmap" class="page" data-page-name="roadmap" style="display:none;">
+          <div class="soft-card">
+            <h2 class="card-title">Thêm môn giả lập</h2>
+            <form id="sim-form" class="sim-form">
+              <input type="text" id="sim-name" placeholder="Tên môn (VD: Nhập môn AI)" required class="soft-input mb-15">
+              <div class="grid-2-col mb-15">
+                <input type="number" id="sim-credits" placeholder="Số TC (VD: 3)" required min="1" max="15" class="soft-input">
+                <input type="number" id="sim-grade" placeholder="Điểm MT (VD: 8.5)" required min="0" max="10" step="0.1" class="soft-input">
+              </div>
+              <button type="submit" class="btn-primary w-100">+ Thêm vào lộ trình</button>
+            </form>
+          </div>
+
+          <div class="soft-card">
+            <h2 class="card-title">Danh sách giả lập <span class="badge" id="sim-count">0</span></h2>
+            <ul id="sim-list" class="soft-list"></ul>
+            <div id="sim-empty" class="empty-state" style="display:none">
+              <p>Chưa có môn giả lập nào.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE SETTINGS -->
+        <div id="page-settings" class="page" data-page-name="settings" style="display:none;">
+          <div class="soft-card">
+            <h2 class="card-title">Cài đặt</h2>
+            <div class="settings-group">
+              <label class="settings-label" for="settings-total-credits">Tổng số tín chỉ cần hoàn thành</label>
+              <div class="settings-row">
+                <input type="number" id="settings-total-credits" class="soft-input" value="150" min="1" max="500" />
+                <button id="btn-save-settings" class="btn-primary">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div style="display: flex; align-items: center; gap: 6px; color: #64748b; font-size: 13px;">
+        <svg class="icon-inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Nguồn: Quy chế đào tạo HUFLIT (QĐ 476)
+      </div>
+      <div style="color: #64748b; font-size: 13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        66 400 lượt truy cập từ 08/12/2025
+      </div>
+    </footer>
+  </section>
+
+  <!-- =================== MODAL NHẬP ĐIỂM ==================== -->
+  <div class="modal-overlay" id="portal-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          </div>
+          <div>
+            <h2 class="modal-title">Nhập dữ liệu Portal</h2>
+            <p class="modal-subtitle">Tự động hóa việc nhập điểm chỉ với vài giây.</p>
+          </div>
+        </div>
+        <button class="modal-close" id="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-steps">
+          <div class="modal-step">
+            <div class="step-icon step-icon-active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></div>
+            <div class="step-content">
+              <strong class="step-label-active">BƯỚC 01</strong>
+              <span class="step-title">Truy cập Portal</span>
+            </div>
+          </div>
+          <div class="modal-step">
+            <div class="step-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></div>
+            <div class="step-content">
+              <strong class="step-label">BƯỚC 02</strong>
+              <span class="step-title">Sao chép tất cả</span>
+            </div>
+          </div>
+          <div class="modal-step">
+            <div class="step-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
+            <div class="step-content">
+              <strong class="step-label">BƯỚC 03</strong>
+              <span class="step-title">Dán vào ô dưới</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-textarea-wrap">
+          <!-- Optional Semester manual select inside modal just in case -->
+          <select id="semester-select" class="soft-input mb-10" style="display:none;"><option value=""></option></select>
+
+          <textarea id="input-transcript" class="soft-textarea" style="min-height: 200px; font-size: 14px;"
+            placeholder="Nhấp vào đây và nhấn Ctrl + V để dán bảng điểm..."></textarea>
+          <div class="modal-status" id="modal-status-text">
+            <span class="status-dot"></span> CHỜ DỮ LIỆU
+          </div>
+        </div>
+        <div id="parse-message" class="parse-message mt-10"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" id="btn-cancel-modal">Hủy</button>
+        <button class="btn-primary" id="btn-parse-save" disabled style="background-color: #e2e8f0; color: #94a3b8; border: none; cursor: not-allowed;">Bắt đầu phân tích</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>el>
+            <p class="text-muted text-sm mb-10">Thêm hoặc xóa các học kỳ đã tạo.</p>
+            <ul id="semester-list-settings" class="soft-list"></ul>
+          </div>
+        </div>
+      </div><!-- /page-settings -->
+
+    </div><!-- /main-content -->
+  </section>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
